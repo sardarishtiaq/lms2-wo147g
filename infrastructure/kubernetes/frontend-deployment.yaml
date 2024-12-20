@@ -1,0 +1,208 @@
+# Frontend Deployment Configuration for CRM System
+# Version: 1.0.0
+# Manages the deployment of the React frontend application with high availability,
+# security, and monitoring capabilities
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: default
+  labels:
+    app: crm
+    component: frontend
+    environment: production
+  annotations:
+    kubernetes.io/change-cause: "Initial deployment"
+    deployment.kubernetes.io/revision: "1"
+
+spec:
+  # High availability configuration with 3 replicas
+  replicas: 3
+  
+  # Zero-downtime rolling update strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  # Pod selector configuration
+  selector:
+    matchLabels:
+      app: crm
+      component: frontend
+
+  template:
+    metadata:
+      labels:
+        app: crm
+        component: frontend
+        environment: production
+      annotations:
+        # Prometheus monitoring configuration
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "80"
+        prometheus.io/path: "/metrics"
+        # Config checksum for automatic pod updates when config changes
+        checksum/config: "${CONFIG_CHECKSUM}"
+
+    spec:
+      # Container configuration
+      containers:
+      - name: frontend
+        image: ${ECR_REGISTRY}/frontend:${IMAGE_TAG}
+        imagePullPolicy: Always
+        
+        # Container port configuration
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        
+        # Resource requests and limits
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        
+        # Environment configuration from ConfigMap
+        envFrom:
+        - configMapRef:
+            name: frontend-config
+        
+        # Health check probes
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+        
+        # Security context for container
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 101
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        
+        # Volume mounts for temporary and cache storage
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+      
+      # Volume definitions
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: nginx-cache
+        emptyDir: {}
+      
+      # Pod anti-affinity for high availability
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: crm
+                  component: frontend
+              topologyKey: kubernetes.io/hostname
+      
+      # Graceful shutdown period
+      terminationGracePeriodSeconds: 30
+      
+      # Image pull secrets for ECR access
+      imagePullSecrets:
+      - name: ecr-registry
+
+---
+# Horizontal Pod Autoscaler configuration
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# Network Policy for frontend pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: crm
+      component: frontend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: ingress-controller
+    ports:
+    - protocol: TCP
+      port: 80
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: crm
+          component: backend
+    ports:
+    - protocol: TCP
+      port: 8080
