@@ -1,0 +1,185 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight UTC
+  push:
+    branches: 
+      - main
+      - develop
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+
+env:
+  SCAN_SEVERITY_THRESHOLD: HIGH
+  NODE_VERSION: '18.x'
+
+jobs:
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Setup Snyk
+        uses: snyk/actions/setup@v3
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          
+      - name: Install backend dependencies
+        working-directory: src/backend
+        run: npm ci
+        
+      - name: Install frontend dependencies
+        working-directory: src/web
+        run: npm ci
+        
+      - name: Scan backend dependencies
+        working-directory: src/backend
+        run: |
+          snyk test --all-projects --json > snyk-backend-report.json || true
+          snyk test --all-projects --json-file-output=snyk-backend-report.html --severity-threshold=${{ env.SCAN_SEVERITY_THRESHOLD }}
+          
+      - name: Scan frontend dependencies
+        working-directory: src/web
+        run: |
+          snyk test --all-projects --json > snyk-frontend-report.json || true
+          snyk test --all-projects --json-file-output=snyk-frontend-report.html --severity-threshold=${{ env.SCAN_SEVERITY_THRESHOLD }}
+          
+      - name: Upload vulnerability reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: snyk-reports
+          path: |
+            src/backend/snyk-backend-report.*
+            src/web/snyk-frontend-report.*
+          retention-days: 30
+
+  sast-scan:
+    name: Static Application Security Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      security-events: write
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript, typescript
+          queries: security-extended,security-and-quality
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install dependencies
+        run: |
+          cd src/backend && npm ci
+          cd ../web && npm ci
+          
+      - name: Build code for analysis
+        run: |
+          cd src/backend && npm run build
+          cd ../web && npm run build
+          
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:javascript,typescript"
+          output: sarif-results
+          
+      - name: Upload SAST results
+        uses: actions/upload-artifact@v3
+        with:
+          name: codeql-results
+          path: sarif-results
+          retention-days: 30
+
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, sast-scan]
+    timeout-minutes: 20
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Build backend image
+        working-directory: src/backend
+        run: docker build -t crm-backend:${{ github.sha }} .
+        
+      - name: Build frontend image
+        working-directory: src/web
+        run: docker build -t crm-frontend:${{ github.sha }} .
+        
+      - name: Run Trivy vulnerability scanner - Backend
+        uses: aquasecurity/trivy-action@0.10.0
+        with:
+          image-ref: crm-backend:${{ github.sha }}
+          format: 'template'
+          template: '@/contrib/sarif.tpl'
+          output: 'trivy-backend-results.sarif'
+          severity: ${{ env.SCAN_SEVERITY_THRESHOLD }},CRITICAL
+          
+      - name: Run Trivy vulnerability scanner - Frontend
+        uses: aquasecurity/trivy-action@0.10.0
+        with:
+          image-ref: crm-frontend:${{ github.sha }}
+          format: 'template'
+          template: '@/contrib/sarif.tpl'
+          output: 'trivy-frontend-results.sarif'
+          severity: ${{ env.SCAN_SEVERITY_THRESHOLD }},CRITICAL
+          
+      - name: Upload Trivy scan results
+        uses: actions/upload-artifact@v3
+        with:
+          name: trivy-results
+          path: |
+            trivy-*-results.sarif
+          retention-days: 30
+
+  security-gate:
+    name: Security Gate Check
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, sast-scan, container-scan]
+    steps:
+      - name: Check scan results
+        run: |
+          if [ -f "snyk-*-report.json" ] && grep -q "critical\|high" snyk-*-report.json; then
+            echo "High or critical vulnerabilities found in dependencies"
+            exit 1
+          fi
+          if [ -f "sarif-results" ] && grep -q '"level": "error"' sarif-results; then
+            echo "High or critical SAST findings detected"
+            exit 1
+          fi
+          if [ -f "trivy-*-results.sarif" ] && grep -q '"level": "error"' trivy-*-results.sarif; then
+            echo "High or critical container vulnerabilities found"
+            exit 1
+          fi
+          echo "All security checks passed"
