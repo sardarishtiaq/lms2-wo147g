@@ -1,0 +1,131 @@
+# Dependabot configuration version
+version: 2
+
+# Update configurations for different package ecosystems
+updates:
+  # Backend NPM dependencies
+  - package-ecosystem: "npm"
+    directory: "/src/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    versioning-strategy: "auto"
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "backend"
+    reviewers:
+      - "CODEOWNERS"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    groups:
+      typescript-eslint:
+        patterns:
+          - "@typescript-eslint/*"
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
+      jest:
+        patterns:
+          - "jest"
+          - "@types/jest"
+          - "ts-jest"
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "aws-sdk"
+        versions: ["3.x"]
+
+  # Frontend NPM dependencies
+  - package-ecosystem: "npm"
+    directory: "/src/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    versioning-strategy: "auto"
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "frontend"
+    reviewers:
+      - "CODEOWNERS"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    groups:
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
+      mui:
+        patterns:
+          - "@mui/*"
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
+      testing-library:
+        patterns:
+          - "@testing-library/*"
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
+
+  # Backend Docker image updates
+  - package-ecosystem: "docker"
+    directory: "/src/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "docker"
+    reviewers:
+      - "CODEOWNERS"
+
+  # Frontend Docker image updates
+  - package-ecosystem: "docker"
+    directory: "/src/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "docker"
+    reviewers:
+      - "CODEOWNERS"
+
+  # GitHub Actions updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "ci"
+    reviewers:
+      - "CODEOWNERS"
