@@ -1,0 +1,57 @@
+# Backend Service Configuration for Multi-tenant CRM System
+# Version: 1.0.0
+# This service exposes the backend microservices internally with monitoring and security features
+
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: crm-backend-service
+  namespace: crm
+  labels:
+    app: crm-backend
+    tier: backend
+    environment: production
+    managed-by: kubernetes
+  annotations:
+    # Prometheus monitoring configuration
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3000"
+    prometheus.io/path: "/metrics"
+    
+    # AWS Load Balancer configuration for internal access
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    
+    # Service mesh integration
+    linkerd.io/inject: "enabled"
+
+spec:
+  # Using ClusterIP for internal access only
+  type: ClusterIP
+  
+  # Port configuration for HTTP and metrics
+  ports:
+    # Main application port
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
+    
+    # Prometheus metrics port
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+      name: metrics
+  
+  # Pod selector matching backend deployment
+  selector:
+    app: crm-backend
+    tier: backend
+    environment: production
+  
+  # Session affinity configuration for stable connections
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800  # 3 hour session persistence
