@@ -1,0 +1,188 @@
+# Loki Helm Chart Values
+# Version: 2.8.0
+# Purpose: Production-grade log aggregation with multi-tenant support and S3 persistence
+
+# Main Loki server configuration
+loki:
+  # High availability configuration with 2 replicas
+  replicaCount: 2
+
+  image:
+    repository: grafana/loki
+    tag: 2.8.0
+    pullPolicy: IfNotPresent
+
+  # Resource allocation for production workloads
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+  # Persistent storage configuration using AWS EBS
+  persistentVolume:
+    enabled: true
+    size: 50Gi
+    storageClass: gp2
+    accessModes:
+      - ReadWriteOnce
+    annotations:
+      "helm.sh/resource-policy": keep
+
+  # Main Loki configuration
+  config:
+    # Enable multi-tenant authentication
+    auth_enabled: true
+
+    # Ingester configuration for chunk management
+    ingester:
+      lifecycler:
+        ring:
+          kvstore:
+            store: memberlist
+      chunk_idle_period: 30m
+      chunk_retain_period: 15m
+      max_chunk_age: 2h
+      wal:
+        enabled: true
+        dir: /data/loki/wal
+
+    # Schema configuration for S3 storage
+    schema_config:
+      configs:
+        - from: "2023-01-01"
+          store: boltdb-shipper
+          object_store: s3
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+
+    # Storage configuration with S3 backend
+    storage_config:
+      boltdb_shipper:
+        active_index_directory: /data/loki/index
+        cache_location: /data/loki/index_cache
+        shared_store: s3
+      aws:
+        s3: s3://${AWS_REGION}/${BUCKET_NAME}
+        region: ${AWS_REGION}
+        insecure: false
+        sse_encryption: true
+
+    # Tenant and query limits configuration
+    limits_config:
+      retention_period: 744h  # 31 days
+      max_query_length: 721h
+      max_query_parallelism: 32
+      per_tenant_rate_limit: 10MB
+      per_stream_rate_limit: 3MB
+      ingestion_rate_mb: 10
+      ingestion_burst_size_mb: 20
+
+    # Compactor configuration
+    compactor:
+      working_directory: /data/loki/compactor
+      shared_store: s3
+      compaction_interval: 10m
+
+    # Query frontend configuration
+    frontend:
+      compress_responses: true
+      log_queries_longer_than: 10s
+      max_outstanding_per_tenant: 2048
+
+    # Query scheduler configuration
+    query_scheduler:
+      max_outstanding_requests_per_tenant: 100
+
+# Promtail configuration for log collection
+promtail:
+  replicaCount: 2
+
+  image:
+    repository: grafana/promtail
+    tag: 2.8.0
+    pullPolicy: IfNotPresent
+
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  config:
+    serverPort: 3101
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+        tenant_id: ${TENANT_ID}
+        basic_auth:
+          username: ${PROMTAIL_USERNAME}
+          password: ${PROMTAIL_PASSWORD}
+
+    # Kubernetes log scraping configuration
+    scrapeConfigs:
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: app
+          - source_labels: [__meta_kubernetes_pod_label_release]
+            target_label: release
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            target_label: container
+          # Add tenant ID label for multi-tenancy
+          - target_label: tenant_id
+            replacement: ${TENANT_ID}
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 3100
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3100"
+
+# Network policies
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: promtail
+        - podSelector:
+            matchLabels:
+              app: grafana
+
+# Pod security context
+securityContext:
+  fsGroup: 10001
+  runAsUser: 10001
+  runAsNonRoot: true
+
+# Pod disruption budget for HA
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Affinity rules for HA
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app
+              operator: In
+              values:
+                - loki
+        topologyKey: kubernetes.io/hostname
