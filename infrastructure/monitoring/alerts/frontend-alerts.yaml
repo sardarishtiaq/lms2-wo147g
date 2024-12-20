@@ -1,0 +1,125 @@
+# Frontend Monitoring Alert Rules
+# Prometheus Version: 2.45.0
+# Alertmanager Version: 0.25.0
+
+groups:
+  - name: frontend_alerts
+    rules:
+    # Performance Monitoring
+    - alert: HighResponseTime
+      expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="frontend-services"}[5m])) by (le)) > 2
+      for: 5m
+      labels:
+        severity: critical
+        service: frontend
+        team: frontend-team
+        category: performance
+      annotations:
+        summary: Frontend response time exceeds SLA
+        description: 95th percentile of response times is above 2 seconds
+        runbook_url: https://runbooks.example.com/frontend/high-response-time
+        dashboard_url: https://grafana.example.com/d/frontend-performance
+        impact: "User experience degradation and potential SLA violations"
+        action: "Check frontend service logs, API latency, and resource utilization"
+
+    # User Adoption Monitoring
+    - alert: LowUserAdoption
+      expr: sum(rate(user_activity_count{job="frontend-services"}[24h])) / sum(total_registered_users) * 100 < 90
+      for: 24h
+      labels:
+        severity: warning
+        service: frontend
+        team: product-team
+        category: business
+      annotations:
+        summary: User adoption below target
+        description: System adoption rate has fallen below 90% threshold
+        runbook_url: https://runbooks.example.com/frontend/low-adoption
+        dashboard_url: https://grafana.example.com/d/user-adoption
+        impact: "Business goal at risk - adoption target not met"
+        action: "Review user feedback, analyze drop-off points, check recent changes"
+
+    # User Satisfaction Monitoring
+    - alert: LowUserSatisfaction
+      expr: avg(user_satisfaction_score{job="frontend-services"}) < 85
+      for: 30m
+      labels:
+        severity: warning
+        service: frontend
+        team: customer-success
+        category: satisfaction
+      annotations:
+        summary: User satisfaction score below target
+        description: Average satisfaction score is below 85%
+        runbook_url: https://runbooks.example.com/frontend/satisfaction
+        dashboard_url: https://grafana.example.com/d/user-satisfaction
+        impact: "Customer experience degradation detected"
+        action: "Review user feedback, check recent UI/UX changes, analyze error rates"
+
+    # Frontend Error Rate Monitoring
+    - alert: HighErrorRate
+      expr: sum(rate(frontend_error_total{job="frontend-services"}[5m])) / sum(rate(frontend_request_total{job="frontend-services"}[5m])) * 100 > 5
+      for: 5m
+      labels:
+        severity: critical
+        service: frontend
+        team: frontend-team
+        category: errors
+      annotations:
+        summary: High frontend error rate detected
+        description: Error rate exceeds 5% of total requests
+        runbook_url: https://runbooks.example.com/frontend/high-error-rate
+        dashboard_url: https://grafana.example.com/d/frontend-errors
+        impact: "Increased user-facing errors affecting experience"
+        action: "Check error logs, recent deployments, and backend service health"
+
+    # Resource Utilization Monitoring
+    - alert: HighClientResourceUsage
+      expr: avg(frontend_client_cpu_usage{job="frontend-services"}) > 80
+      for: 10m
+      labels:
+        severity: warning
+        service: frontend
+        team: frontend-team
+        category: resources
+      annotations:
+        summary: High client-side resource usage
+        description: Average client CPU usage exceeds 80%
+        runbook_url: https://runbooks.example.com/frontend/resource-usage
+        dashboard_url: https://grafana.example.com/d/frontend-resources
+        impact: "Degraded performance on user devices"
+        action: "Review frontend bundle size, JavaScript execution, and rendering performance"
+
+    # Page Load Time Monitoring
+    - alert: SlowPageLoad
+      expr: histogram_quantile(0.95, sum(rate(page_load_time_seconds_bucket{job="frontend-services"}[5m])) by (le)) > 3
+      for: 5m
+      labels:
+        severity: warning
+        service: frontend
+        team: frontend-team
+        category: performance
+      annotations:
+        summary: Slow page load times detected
+        description: 95th percentile of page load times exceeds 3 seconds
+        runbook_url: https://runbooks.example.com/frontend/slow-page-load
+        dashboard_url: https://grafana.example.com/d/frontend-page-load
+        impact: "Poor initial user experience and potential SEO impact"
+        action: "Check asset sizes, CDN performance, and rendering bottlenecks"
+
+    # API Integration Monitoring
+    - alert: APIIntegrationIssues
+      expr: sum(rate(frontend_api_error_total{job="frontend-services"}[5m])) > 10
+      for: 5m
+      labels:
+        severity: critical
+        service: frontend
+        team: frontend-team
+        category: integration
+      annotations:
+        summary: Frontend API integration issues detected
+        description: High rate of API errors from frontend services
+        runbook_url: https://runbooks.example.com/frontend/api-issues
+        dashboard_url: https://grafana.example.com/d/frontend-api
+        impact: "Data fetching issues affecting functionality"
+        action: "Check API endpoint health, network connectivity, and error patterns"
