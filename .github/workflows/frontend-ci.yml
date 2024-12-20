@@ -1,0 +1,171 @@
+name: Frontend CI
+
+# Trigger workflow on push/PR to main and manual dispatch
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/web/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/web/**'
+      - '.github/workflows/frontend-ci.yml'
+  workflow_dispatch:
+
+# Environment variables
+env:
+  NODE_VERSION: '18.x'
+  WORKING_DIR: './src/web'
+  CACHE_KEY_PREFIX: 'frontend-deps'
+
+# Concurrency group to cancel in-progress runs
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: ${{ env.WORKING_DIR }}/node_modules
+          key: ${{ env.CACHE_KEY_PREFIX }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ env.CACHE_KEY_PREFIX }}-
+
+      - name: Install dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint code
+        run: npm run lint
+        
+      - name: Format check
+        run: npx prettier --check "src/**/*.{ts,tsx}"
+
+      - name: Run tests
+        run: npm run test:coverage
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: ${{ env.WORKING_DIR }}/coverage
+          retention-days: 14
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build
+          path: ${{ env.WORKING_DIR }}/dist
+          retention-days: 14
+
+      - name: Generate build metadata
+        if: success()
+        run: |
+          echo "BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_ENV
+          echo "GIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
+
+      - name: Upload build metadata
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-metadata
+          path: |
+            echo "build_time=${{ env.BUILD_TIME }}" >> build-metadata.txt
+            echo "git_sha=${{ env.GIT_SHA }}" >> build-metadata.txt
+            echo "build_number=${{ env.BUILD_NUMBER }}" >> build-metadata.txt
+          retention-days: 14
+
+  e2e-tests:
+    name: E2E Tests
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          CI: true
+
+      - name: Upload E2E test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: ${{ env.WORKING_DIR }}/playwright-report
+          retention-days: 14
+
+  deploy:
+    name: Deploy to Staging
+    needs: [build, e2e-tests]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build
+          path: build
+
+      - name: Trigger staging deployment
+        run: |
+          echo "Triggering staging deployment workflow..."
+          gh workflow run deploy-staging.yml \
+            -f environment=staging \
+            -f artifact_name=build \
+            -f build_number=${{ github.run_number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
