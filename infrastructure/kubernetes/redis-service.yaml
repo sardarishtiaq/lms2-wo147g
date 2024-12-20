@@ -1,0 +1,50 @@
+# Redis Service Configuration for Multi-tenant CRM System
+# Version: 1.0
+# Provides high-availability caching and session management capabilities
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: default
+  labels:
+    app: redis
+    tier: cache
+    component: session-store
+    part-of: crm-system
+  annotations:
+    # Enable endpoints to be published even if not all pods are ready
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+    # Prometheus monitoring configuration
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9121"
+    # Ensure service is only accessible within the cluster
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+
+spec:
+  # Headless service for StatefulSet pod DNS entries
+  type: ClusterIP
+  clusterIP: None
+  
+  # Service ports configuration
+  ports:
+    # Main Redis port
+    - port: 6379
+      targetPort: 6379
+      name: redis
+      protocol: TCP
+    # Prometheus metrics exporter port
+    - port: 9121
+      targetPort: 9121
+      name: metrics
+      protocol: TCP
+  
+  # Pod selector matching Redis StatefulSet labels
+  selector:
+    app: redis
+    tier: cache
+  
+  # Required for Redis cluster discovery
+  publishNotReadyAddresses: true
+  
+  # Ensure requests from the same client go to the same Redis instance
+  sessionAffinity: ClientIP
