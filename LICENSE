@@ -1,0 +1,126 @@
+MULTI-TENANT CRM SYSTEM SOFTWARE LICENSE AGREEMENT
+Version 1.0
+Last Updated: 2024
+
+1. COPYRIGHT NOTICE
+
+Copyright © 2024 [Company Name]. All rights reserved.
+
+This software and associated documentation files (the "Software") are the proprietary property of [Company Name] and are protected by copyright laws and international treaty provisions.
+
+2. USAGE RIGHTS
+
+2.1 Multi-tenant Deployment License
+- Licensee is granted a non-exclusive, non-transferable right to deploy the Software in a multi-tenant environment.
+- Each tenant organization must maintain separate data isolation and access controls.
+- Licensee may create and manage multiple tenant instances within licensed deployment limits.
+
+2.2 Authorized Users
+- Software access is restricted to authorized users within licensed tenant organizations.
+- User accounts must not be shared between individuals or organizations.
+- Authentication and access controls must be maintained per tenant.
+
+3. RESTRICTIONS
+
+3.1 Prohibited Actions
+- Reverse engineering, decompiling, or disassembling the Software
+- Removing or altering any copyright notices or proprietary markings
+- Creating derivative works without explicit written permission
+- Sublicensing, renting, or leasing the Software
+
+3.2 Distribution Limitations
+- Software redistribution is strictly prohibited without written authorization
+- All deployment instances must be directly licensed from [Company Name]
+- Source code access is restricted and subject to separate agreements
+
+4. COMMERCIAL TERMS
+
+4.1 Enterprise Licensing
+- License fees based on deployment scale and tenant count
+- Annual subscription includes maintenance and standard support
+- Additional services subject to separate service agreements
+
+4.2 Payment Terms
+- License fees payable in advance
+- Renewal terms as specified in enterprise agreement
+- Usage monitoring and compliance auditing rights reserved
+
+5. WARRANTIES
+
+5.1 Limited Warranty
+- Software will substantially conform to documented specifications
+- 90-day warranty period from initial deployment
+- Exclusive remedy limited to repair, replacement, or refund
+
+5.2 Warranty Disclaimers
+EXCEPT AS EXPRESSLY PROVIDED HEREIN, THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+6. LIABILITY
+
+6.1 Limitation of Liability
+IN NO EVENT SHALL [COMPANY NAME] BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR IN CONNECTION WITH THE SOFTWARE USE OR PERFORMANCE.
+
+6.2 Indemnification
+Licensee agrees to indemnify and hold [Company Name] harmless from claims arising from:
+- Unauthorized Software use or modification
+- Violation of applicable laws or regulations
+- Breach of license terms
+
+7. DATA PROTECTION AND PRIVACY
+
+7.1 GDPR Compliance
+- Software deployment must comply with GDPR requirements
+- Data processing agreements required for EU data subjects
+- Privacy impact assessments mandatory for high-risk processing
+
+7.2 Data Security
+- Tenant data isolation must be maintained
+- Security controls implementation required
+- Breach notification procedures must be followed
+
+8. GEOGRAPHIC COMPLIANCE
+
+8.1 Regional Requirements
+- Compliance with local data protection laws required
+- Region-specific deployment restrictions may apply
+- Export control regulations must be observed
+
+9. THIRD-PARTY COMPONENTS
+
+9.1 Included Components
+- Third-party software subject to respective licenses
+- Open source compliance requirements must be met
+- Attribution and notices must be preserved
+
+10. TERMINATION
+
+10.1 Termination Conditions
+- Breach of license terms
+- Failure to pay applicable fees
+- Bankruptcy or insolvency
+- Violation of use restrictions
+
+10.2 Effect of Termination
+- Immediate cessation of Software use
+- Return or destruction of all copies
+- Tenant data handling per agreement terms
+- Survival of applicable provisions
+
+11. GENERAL PROVISIONS
+
+11.1 Governing Law
+This Agreement shall be governed by and construed in accordance with the laws of [Jurisdiction], without regard to conflicts of law principles.
+
+11.2 Entire Agreement
+This License constitutes the entire agreement between the parties concerning the Software and supersedes all prior agreements and understandings.
+
+11.3 Modifications
+[Company Name] reserves the right to modify this License with notice to Licensee. Continued use constitutes acceptance of modifications.
+
+For licensing inquiries contact:
+[Company Name]
+[Address]
+[Email]
+[Phone]
+
+END OF LICENSE
