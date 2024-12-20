@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: crm-system
+  labels:
+    app: crm-backend
+    environment: production
+    component: configuration
+  annotations:
+    description: "Multi-tenant CRM backend configuration"
+    version: "1.0.0"
+    lastUpdated: "2024-01-01"
+data:
+  # Database Configuration
+  # Enhanced MongoDB settings with tenant isolation and performance optimization
+  MONGODB_MAX_POOL_SIZE: "100"
+  MONGODB_MIN_POOL_SIZE: "10"
+  MONGODB_SERVER_SELECTION_TIMEOUT_MS: "5000"
+  MONGODB_SOCKET_TIMEOUT_MS: "45000"
+  MONGODB_HEARTBEAT_FREQUENCY_MS: "10000"
+  MONGODB_WRITE_CONCERN: "majority"
+  MONGODB_READ_PREFERENCE: "primaryPreferred"
+  MONGODB_TENANT_DB_PREFIX: "tenant_"
+  MONGODB_ENABLE_SHARDING: "true"
+  MONGODB_RETRY_WRITES: "true"
+  MONGODB_SSL_ENABLED: "true"
+  MONGODB_REPLICA_SET_NAME: "crm-rs"
+
+  # Redis Cache Configuration
+  # Advanced caching settings with cluster support and session management
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_KEY_PREFIX: "crm:"
+  REDIS_CLUSTER_ENABLED: "true"
+  REDIS_MAX_RETRIES: "3"
+  REDIS_RETRY_INTERVAL: "1000"
+  REDIS_TLS_ENABLED: "true"
+  CACHE_TTL: "3600"
+  CACHE_MAX_KEYS: "10000"
+  CACHE_INVALIDATION_EVENTS: "true"
+  CACHE_COMPRESSION_ENABLED: "true"
+  CACHE_COMPRESSION_THRESHOLD: "1024"
+  SESSION_TTL: "86400"
+  SESSION_PREFIX: "sess:"
+  SESSION_SECURE: "true"
+  SESSION_SAME_SITE: "strict"
+  SESSION_HTTP_ONLY: "true"
+
+  # Email Service Configuration
+  # Comprehensive email settings with tenant-specific overrides
+  SMTP_HOST: "smtp.sendgrid.net"
+  SMTP_PORT: "587"
+  SMTP_SECURE: "false"
+  EMAIL_FROM: "noreply@crm.com"
+  EMAIL_REPLY_TO: "support@crm.com"
+  EMAIL_RATE_LIMIT_PER_SECOND: "10"
+  EMAIL_RATE_LIMIT_PER_DAY: "50000"
+  EMAIL_TEMPLATE_PATH: "/app/templates"
+  EMAIL_TEMPLATE_CACHE: "true"
+  EMAIL_TENANT_OVERRIDE_ENABLED: "true"
+  EMAIL_ENCRYPTION_ENABLED: "true"
+  EMAIL_ENCRYPTION_ALGORITHM: "aes-256-gcm"
+
+  # Application Configuration
+  # General application settings with enhanced security features
+  NODE_ENV: "production"
+  PORT: "3000"
+  API_VERSION: "v1"
+  LOG_LEVEL: "info"
+  ENABLE_REQUEST_LOGGING: "true"
+  REQUEST_TIMEOUT: "30000"
+  CORS_ENABLED: "true"
+  CORS_ORIGIN: "https://*.crm.com"
+  CORS_METHODS: "GET,POST,PUT,DELETE,PATCH"
+  CORS_ALLOWED_HEADERS: "Content-Type,Authorization,X-Tenant-ID"
+  CORS_MAX_AGE: "86400"
+  RATE_LIMIT_WINDOW_MS: "900000"
+  RATE_LIMIT_MAX_REQUESTS: "100"
+  TENANT_HEADER_NAME: "X-Tenant-ID"
+  TENANT_VALIDATION_ENABLED: "true"
+  ERROR_STACK_TRACE_LIMIT: "10"
+
+  # Monitoring and Metrics Configuration
+  MONITORING_ENABLED: "true"
+  METRICS_ENABLED: "true"
+  METRICS_INTERVAL: "60000"
+  HEALTH_CHECK_ENABLED: "true"
+  HEALTH_CHECK_INTERVAL: "30000"
+  HEALTH_CHECK_TIMEOUT: "5000"
+
+  # Security Configuration
+  SECURITY_HEADERS_ENABLED: "true"
+  SECURITY_XSS_PROTECTION: "1; mode=block"
+  SECURITY_FRAME_OPTIONS: "DENY"
+  SECURITY_CONTENT_TYPE_OPTIONS: "nosniff"
+  SECURITY_REFERRER_POLICY: "strict-origin-when-cross-origin"
+  SECURITY_CONTENT_SECURITY_POLICY: "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self' data:;"
