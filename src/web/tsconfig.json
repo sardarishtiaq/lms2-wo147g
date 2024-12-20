@@ -1,0 +1,78 @@
+{
+  "compilerOptions": {
+    // ECMAScript Target and Features
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "ESNext",
+    
+    // Module Resolution
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@hooks/*": ["src/hooks/*"],
+      "@services/*": ["src/services/*"],
+      "@utils/*": ["src/utils/*"],
+      "@types/*": ["src/types/*"],
+      "@styles/*": ["src/styles/*"],
+      "@assets/*": ["src/assets/*"]
+    },
+    
+    // Type Checking and Strict Rules
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    
+    // React and JSX
+    "jsx": "react-jsx",
+    
+    // Build and Emit
+    "noEmit": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    
+    // Module Features
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "allowSyntheticDefaultImports": true,
+    
+    // Type Definitions
+    "types": [
+      "vite/client",
+      "jest",
+      "@testing-library/jest-dom",
+      "node"
+    ]
+  },
+  
+  // Project Files
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "vite.config.ts",
+    "jest.setup.ts"
+  ],
+  
+  // Excluded Files and Directories
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    ".docker",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ],
+  
+  // Project References
+  "references": [
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ]
+}
