@@ -1,0 +1,115 @@
+# Kubernetes Deployment configuration for CRM Backend Service
+# Version: apps/v1
+# Purpose: Manages the deployment of backend microservices with high availability,
+# resource management, and security configurations
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crm-backend
+  namespace: crm
+  labels:
+    app: crm-backend
+    tier: backend
+    environment: production
+  annotations:
+    kubernetes.io/change-cause: "Initial deployment of CRM backend service with security and monitoring configurations"
+
+spec:
+  # High availability configuration with 3 replicas
+  replicas: 3
+  
+  # Pod selector matching service selector
+  selector:
+    matchLabels:
+      app: crm-backend
+      tier: backend
+
+  # Zero-downtime deployment strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+  template:
+    metadata:
+      labels:
+        app: crm-backend
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+
+    spec:
+      # Security context for non-root execution
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: crm-backend
+          image: crm-backend:latest
+          imagePullPolicy: Always
+          
+          # Container port configuration
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+
+          # Resource allocation and limits
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+
+          # Health monitoring
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+
+          # Environment configuration from ConfigMap and Secrets
+          envFrom:
+            - configMapRef:
+                name: backend-config
+            - secretRef:
+                name: backend-secrets
+
+      # Pod termination grace period
+      terminationGracePeriodSeconds: 60
+
+      # Affinity rules for pod distribution
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - crm-backend
+                topologyKey: "kubernetes.io/hostname"
+
+      # Quality of Service class: Burstable
+      # Based on resource requests and limits configuration
