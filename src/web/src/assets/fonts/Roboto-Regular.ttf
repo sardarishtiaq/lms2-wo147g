@@ -1,0 +1,34 @@
+1. Download URL: https://fonts.google.com/download?family=Roboto
+2. Font Version: 2.0
+3. File Format: TrueType Font (.ttf)
+4. Font Weight: Regular (400)
+
+The file should be placed at the specified path:
+src/web/src/assets/fonts/Roboto-Regular.ttf
+
+Key Implementation Notes:
+
+1. Font Specifications:
+- Family: Roboto
+- Weight: 400 (Regular)
+- Style: Normal
+- Format: TrueType
+- Unicode Range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD
+
+2. Performance Optimizations:
+- Enable dynamic subsetting for production
+- Implement preloading strategy
+- Configure long-term caching
+- Apply gzip/brotli compression
+- Convert to WOFF2 for modern browsers
+
+3. Accessibility Considerations:
+- Ensure minimum contrast ratios
+- Implement proper fallback fonts
+- Set minimum font sizes
+- Apply rendering optimizations
+
+4. Browser Support:
+- Modern browsers: Chrome >=36, Firefox >=39, Safari >=12, Edge >=79
+- Legacy support: IE11 with system font fallback
+- Mobile: iOS >=10, Android >=5
