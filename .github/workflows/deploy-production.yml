@@ -1,0 +1,195 @@
+name: Production Deployment
+
+# Trigger on main branch pushes or manual workflow dispatch
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/backend/**'
+      - 'src/web/**'
+      - 'infrastructure/kubernetes/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+        type: string
+      deploy_region:
+        description: 'Target region for deployment'
+        required: true
+        type: choice
+        options:
+          - primary
+          - secondary
+          - both
+
+# Environment configuration
+env:
+  NODE_ENV: production
+  PRODUCTION_NAMESPACE: crm-production
+  PRIMARY_REGION: us-east-1
+  SECONDARY_REGION: us-west-2
+  EKS_CLUSTER_NAME: crm-production-cluster
+  PRODUCTION_DOMAIN: crm.example.com
+  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+  VERSION: ${{ github.event.inputs.version || 'latest' }}
+  DEPLOY_REGION: ${{ github.event.inputs.deploy_region || 'both' }}
+
+# Concurrency control to prevent parallel deployments
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+# Required permissions
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+jobs:
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm audit fix
+
+      - name: SAST Scan
+        uses: snyk/actions/node@v3
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Container Security Scan
+        uses: aquasecurity/trivy-action@v0.10.0
+        with:
+          image-ref: '${{ env.ECR_REGISTRY }}/crm-backend:${{ env.VERSION }}'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Security Results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  build-and-push:
+    needs: security-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.PRIMARY_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and Push Images
+        run: |
+          docker build -t $ECR_REGISTRY/crm-backend:$VERSION ./src/backend
+          docker build -t $ECR_REGISTRY/crm-frontend:$VERSION ./src/web
+          docker push $ECR_REGISTRY/crm-backend:$VERSION
+          docker push $ECR_REGISTRY/crm-frontend:$VERSION
+
+  deploy-primary:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://${{ env.PRODUCTION_DOMAIN }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.PRIMARY_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.PRIMARY_REGION }}
+
+      - name: Deploy Canary
+        run: |
+          export IMAGE_TAG=$VERSION
+          envsubst < infrastructure/kubernetes/canary/backend-canary.yaml | kubectl apply -f -
+          envsubst < infrastructure/kubernetes/canary/frontend-canary.yaml | kubectl apply -f -
+
+      - name: Canary Health Check
+        run: |
+          for i in {1..10}; do
+            curl -f https://canary.api.${{ env.PRODUCTION_DOMAIN }}/health && break
+            sleep 30
+          done
+
+      - name: Full Deployment
+        if: success()
+        run: |
+          export IMAGE_TAG=$VERSION
+          envsubst < infrastructure/kubernetes/backend-deployment.yaml | kubectl apply -f -
+          envsubst < infrastructure/kubernetes/frontend-deployment.yaml | kubectl apply -f -
+
+      - name: Configure Datadog Monitoring
+        run: |
+          kubectl create secret generic datadog-secret \
+            --from-literal api-key=${{ secrets.DATADOG_API_KEY }} \
+            --namespace ${{ env.PRODUCTION_NAMESPACE }}
+
+  deploy-secondary:
+    needs: deploy-primary
+    if: ${{ env.DEPLOY_REGION == 'both' || env.DEPLOY_REGION == 'secondary' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production-dr
+      url: https://dr.${{ env.PRODUCTION_DOMAIN }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.SECONDARY_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }}-dr --region ${{ env.SECONDARY_REGION }}
+
+      - name: Deploy DR Environment
+        run: |
+          export IMAGE_TAG=$VERSION
+          envsubst < infrastructure/kubernetes/backend-deployment.yaml | kubectl apply -f -
+          envsubst < infrastructure/kubernetes/frontend-deployment.yaml | kubectl apply -f -
+
+      - name: Verify DR Deployment
+        run: |
+          for i in {1..10}; do
+            curl -f https://dr.api.${{ env.PRODUCTION_DOMAIN }}/health && break
+            sleep 30
+          done
+
+  post-deployment:
+    needs: [deploy-primary, deploy-secondary]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Deployment Status
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: 'deployments'
+          slack-message: "Production deployment of version ${{ env.VERSION }} completed successfully"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Update Deployment Documentation
+        run: |
+          echo "Deployment ${{ env.VERSION }} completed at $(date -u) UTC" >> deployments.log
