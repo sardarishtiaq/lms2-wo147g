@@ -1,0 +1,143 @@
+# Prometheus Alert Rules for Multi-tenant CRM Backend Services
+# Version: 1.0.0
+# Prometheus Version: 2.45.0
+
+groups:
+  # Service Availability Monitoring
+  - name: backend_availability
+    rules:
+      - alert: BackendServiceDown
+        expr: up{job="backend-services", tenant!=""} == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "Backend service is down for tenant {{ $labels.tenant }}"
+          description: "Backend service has been down for more than 5 minutes for tenant {{ $labels.tenant }}"
+          runbook_url: "https://wiki.example.com/runbooks/backend-service-down"
+
+      - alert: BackendServiceUnhealthy
+        expr: sum(up{job="backend-services"}) by (tenant) / count(up{job="backend-services"}) by (tenant) < 0.7
+        for: 5m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "Backend service health critical for tenant {{ $labels.tenant }}"
+          description: "Less than 70% of backend service instances are healthy for tenant {{ $labels.tenant }}"
+
+  # Performance Monitoring
+  - name: backend_performance
+    rules:
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, sum by (le, tenant) (rate(http_request_duration_seconds_bucket{job="backend-services"}[5m]))) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "High response time for tenant {{ $labels.tenant }}"
+          description: "95th percentile of response times is above 2 seconds for tenant {{ $labels.tenant }}"
+
+      - alert: APILatencyDegraded
+        expr: rate(http_request_duration_seconds_sum{job="backend-services"}[5m]) / rate(http_request_duration_seconds_count{job="backend-services"}[5m]) > 1
+        for: 10m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "API latency degraded for tenant {{ $labels.tenant }}"
+          description: "Average API latency is above 1 second for tenant {{ $labels.tenant }}"
+
+  # Error Rate Monitoring
+  - name: backend_errors
+    rules:
+      - alert: HighErrorRate
+        expr: sum by (tenant) (rate(http_requests_total{job="backend-services",status=~"5.."}[5m])) / sum by (tenant) (rate(http_requests_total{job="backend-services"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "High error rate for tenant {{ $labels.tenant }}"
+          description: "Error rate is above 5% for tenant {{ $labels.tenant }} in the last 5 minutes"
+
+      - alert: DatabaseConnectionErrors
+        expr: rate(database_connection_errors_total{job="backend-services"}[5m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "Database connection errors for tenant {{ $labels.tenant }}"
+          description: "Database connection errors detected for tenant {{ $labels.tenant }}"
+
+  # Resource Utilization
+  - name: backend_resources
+    rules:
+      - alert: HighMemoryUsage
+        expr: sum by (tenant) (container_memory_usage_bytes{job="backend-services"}) / sum by (tenant) (container_spec_memory_limit_bytes{job="backend-services"}) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "High memory usage for tenant {{ $labels.tenant }}"
+          description: "Memory usage is above 85% for tenant {{ $labels.tenant }} for 10 minutes"
+
+      - alert: HighCPUUsage
+        expr: sum by (tenant) (rate(container_cpu_usage_seconds_total{job="backend-services"}[5m])) / sum by (tenant) (container_spec_cpu_quota{job="backend-services"}) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "High CPU usage for tenant {{ $labels.tenant }}"
+          description: "CPU usage is above 85% for tenant {{ $labels.tenant }} for 10 minutes"
+
+  # Business Metrics
+  - name: backend_business
+    rules:
+      - alert: LeadProcessingDelay
+        expr: lead_processing_duration_seconds{tenant!=""} > 300
+        for: 15m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "Lead processing delay for tenant {{ $labels.tenant }}"
+          description: "Lead processing is taking longer than 5 minutes for tenant {{ $labels.tenant }}"
+
+      - alert: QuoteGenerationFailures
+        expr: rate(quote_generation_failures_total{job="backend-services"}[15m]) > 0
+        for: 15m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "Quote generation failures for tenant {{ $labels.tenant }}"
+          description: "Quote generation failures detected for tenant {{ $labels.tenant }}"
+
+  # Security Monitoring
+  - name: backend_security
+    rules:
+      - alert: HighAuthenticationFailures
+        expr: sum by (tenant) (rate(authentication_failures_total{job="backend-services"}[5m])) > 10
+        for: 5m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "High authentication failures for tenant {{ $labels.tenant }}"
+          description: "More than 10 authentication failures per minute detected for tenant {{ $labels.tenant }}"
+
+      - alert: RateLimitExceeded
+        expr: sum by (tenant) (rate(rate_limit_exceeded_total{job="backend-services"}[5m])) > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "Rate limit exceeded for tenant {{ $labels.tenant }}"
+          description: "API rate limit exceeded for tenant {{ $labels.tenant }}"
