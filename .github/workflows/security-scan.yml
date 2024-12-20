@@ -138,7 +138,7 @@ jobs:
         run: docker build -t crm-frontend:${{ github.sha }} .
         
       - name: Run Trivy vulnerability scanner - Backend
-        uses: aquasecurity/trivy-action@0.10.0
+        uses: aquasecurity/trivy-action@0.29.0
         with:
           image-ref: crm-backend:${{ github.sha }}
           format: 'template'
@@ -147,7 +147,7 @@ jobs:
           severity: ${{ env.SCAN_SEVERITY_THRESHOLD }},CRITICAL
           
       - name: Run Trivy vulnerability scanner - Frontend
-        uses: aquasecurity/trivy-action@0.10.0
+        uses: aquasecurity/trivy-action@0.29.0
         with:
           image-ref: crm-frontend:${{ github.sha }}
           format: 'template'
