@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="50" viewBox="0 0 200 50" preserveAspectRatio="xMidYMid meet" role="img" aria-label="CRM System Logo" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main Logo Container -->
+  <defs>
+    <!-- Gradient for depth effect -->
+    <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1976D2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1565C0;stop-opacity:1" />
+    </linearGradient>
+    <!-- Secondary accent gradient -->
+    <linearGradient id="secondaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#388E3C;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Logo Symbol - Abstract CRM representation -->
+  <g transform="translate(10, 10)">
+    <!-- Dynamic connection lines representing CRM relationships -->
+    <path d="M10,15 Q25,5 40,15 T70,15" 
+          stroke="url(#primaryGradient)" 
+          fill="none" 
+          stroke-width="3"
+          stroke-linecap="round" />
+    
+    <!-- Central hub representing system core -->
+    <circle cx="40" cy="25" r="15" 
+            fill="url(#primaryGradient)" />
+    
+    <!-- Connected nodes representing multi-tenant capability -->
+    <circle cx="15" cy="25" r="6" 
+            fill="url(#secondaryGradient)" />
+    <circle cx="65" cy="25" r="6" 
+            fill="url(#secondaryGradient)" />
+  </g>
+
+  <!-- Wordmark - "CRM" -->
+  <g transform="translate(90, 15)">
+    <text x="0" y="25" 
+          font-family="Arial, sans-serif" 
+          font-weight="bold" 
+          font-size="24" 
+          fill="#1976D2">
+      CRM
+    </text>
+  </g>
+
+  <!-- System tagline -->
+  <g transform="translate(90, 35)">
+    <text x="0" y="10" 
+          font-family="Arial, sans-serif" 
+          font-size="10" 
+          fill="#388E3C">
+      Enterprise Solutions
+    </text>
+  </g>
+</svg>
