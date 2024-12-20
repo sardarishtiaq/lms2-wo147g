@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-hidden="true" aria-label="Placeholder image">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F5F5F5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E0E0E0;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1976D2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1565C0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="240" height="240" fill="url(#bgGradient)" />
+
+  <!-- Placeholder Icon -->
+  <g transform="translate(60,60)">
+    <!-- Main Circle -->
+    <circle cx="60" cy="60" r="50" fill="url(#iconGradient)" opacity="0.9" />
+    
+    <!-- Abstract Image Representation -->
+    <rect x="40" y="40" width="40" height="30" fill="#FFFFFF" opacity="0.9" rx="4" />
+    <circle cx="55" cy="50" r="6" fill="#FFFFFF" opacity="0.9" />
+    <rect x="40" y="75" width="40" height="4" fill="#FFFFFF" opacity="0.7" rx="2" />
+    <rect x="45" y="82" width="30" height="4" fill="#FFFFFF" opacity="0.5" rx="2" />
+  </g>
+
+  <!-- Decorative Elements -->
+  <path d="M0,240 L60,180 L120,220 L180,160 L240,240 Z" fill="#388E3C" opacity="0.1" />
+  <path d="M240,0 L180,60 L120,20 L60,80 L0,0 Z" fill="#1976D2" opacity="0.1" />
+</svg>
