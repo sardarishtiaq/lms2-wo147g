@@ -1,0 +1,241 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Lead Conversion Rate",
+      "type": "gauge",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(leads_converted_total{tenant_id=\"$tenant\"}[24h])) / sum(rate(leads_total{tenant_id=\"$tenant\"}[24h])) * 100",
+          "legendFormat": "Conversion Rate"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "thresholds": [
+          {
+            "value": 0,
+            "color": "red"
+          },
+          {
+            "value": 15,
+            "color": "yellow"
+          },
+          {
+            "value": 25,
+            "color": "green"
+          }
+        ]
+      }
+    },
+    {
+      "title": "System Response Time",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{tenant_id=\"$tenant\"}[5m])) by (le))",
+          "legendFormat": "95th Percentile"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "alert": {
+        "name": "High Latency Alert",
+        "conditions": [
+          {
+            "evaluator": {
+              "params": [2],
+              "type": "gt"
+            },
+            "operator": {
+              "type": "and"
+            },
+            "query": {
+              "params": ["A", "5m", "now"]
+            },
+            "reducer": {
+              "params": [],
+              "type": "avg"
+            },
+            "type": "query"
+          }
+        ]
+      }
+    },
+    {
+      "title": "User Adoption Rate",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(active_users_total{tenant_id=\"$tenant\"}) / sum(registered_users_total{tenant_id=\"$tenant\"}) * 100",
+          "legendFormat": "Adoption Rate"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "thresholds": {
+          "steps": [
+            {
+              "value": 0,
+              "color": "red"
+            },
+            {
+              "value": 70,
+              "color": "yellow"
+            },
+            {
+              "value": 90,
+              "color": "green"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Customer Satisfaction Score",
+      "type": "gauge",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "avg(customer_satisfaction_score{tenant_id=\"$tenant\"})",
+          "legendFormat": "CSAT Score"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "options": {
+        "thresholds": [
+          {
+            "value": 0,
+            "color": "red"
+          },
+          {
+            "value": 70,
+            "color": "yellow"
+          },
+          {
+            "value": 85,
+            "color": "green"
+          }
+        ]
+      }
+    },
+    {
+      "title": "Lead Pipeline Distribution",
+      "type": "pie",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(leads_by_category{tenant_id=\"$tenant\"}) by (category)",
+          "legendFormat": "{{category}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "options": {
+        "legend": {
+          "show": true,
+          "values": true,
+          "percentage": true
+        }
+      }
+    },
+    {
+      "title": "Quote Generation Trend",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(quotes_generated_total{tenant_id=\"$tenant\"}[1h])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "options": {
+        "legend": {
+          "show": true,
+          "values": true
+        }
+      }
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 27,
+  "style": "dark",
+  "tags": ["business", "crm", "kpi"],
+  "templating": {
+    "list": [
+      {
+        "name": "tenant",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(tenant_id)",
+        "refresh": 2,
+        "includeAll": false,
+        "multi": false,
+        "required": true
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": ["5m", "15m", "30m", "1h", "2h", "1d"]
+  },
+  "timezone": "browser",
+  "title": "CRM Business Metrics",
+  "uid": "crm-business-metrics",
+  "version": 1
+}
