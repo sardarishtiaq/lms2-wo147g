@@ -1,0 +1,50 @@
+# Frontend Configuration ConfigMap for Multi-tenant CRM
+# Version: 1.0.0
+# This ConfigMap contains environment configuration for the React frontend deployment
+# Reference: Technical Specifications/2.4.2 Deployment Architecture
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: default
+  labels:
+    app: crm
+    component: frontend
+    environment: ${ENVIRONMENT}
+  annotations:
+    description: "Frontend environment configuration for Multi-tenant CRM"
+    version: "1.0.0"
+    lastUpdated: "2024-01-01"
+
+data:
+  # Application Configuration
+  VITE_APP_NAME: "Multi-tenant CRM"
+  
+  # API Configuration
+  # Backend service URL for HTTP requests using internal k8s DNS
+  VITE_API_URL: "http://backend-service:8080"
+  VITE_API_VERSION: "v1"
+  
+  # WebSocket Configuration for Real-time Updates
+  # Reference: Technical Specifications/1.2 System Overview
+  VITE_WEBSOCKET_URL: "ws://backend-service:8080"
+  VITE_WEBSOCKET_RECONNECT_ATTEMPTS: "5"
+  VITE_WEBSOCKET_RECONNECT_DELAY: "1000"
+  VITE_WEBSOCKET_TIMEOUT: "20000"
+  
+  # Authentication Configuration
+  # JWT token expiry durations aligned with security specifications
+  VITE_AUTH_TOKEN_EXPIRY: "900"      # 15 minutes in seconds
+  VITE_REFRESH_TOKEN_EXPIRY: "604800" # 7 days in seconds
+  
+  # Feature Flags and Monitoring
+  VITE_ENABLE_ANALYTICS: "true"
+  # Sentry DSN injected from kubernetes secret
+  VITE_SENTRY_DSN: "${SENTRY_DSN}"
+
+  # Additional Configuration
+  VITE_LOG_LEVEL: "error"            # Production logging level
+  VITE_API_TIMEOUT: "30000"          # API request timeout in milliseconds
+  VITE_MAX_UPLOAD_SIZE: "10485760"   # Maximum file upload size (10MB)
+  VITE_TENANT_HEADER: "X-Tenant-ID"  # Tenant identification header
