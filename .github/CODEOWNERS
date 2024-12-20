@@ -1,0 +1,28 @@
+# These owners will be the default owners for everything in the repository
+# unless a later match takes precedence
+* @tech-leads
+
+# Backend code ownership
+src/backend/** @backend-team @senior-backend-devs
+src/backend/src/db/** @database-team @data-architects
+src/backend/src/api/** @api-team @backend-architects
+src/backend/src/config/** @backend-config-team @security-team
+
+# Frontend code ownership
+src/web/** @frontend-team @senior-frontend-devs
+src/web/src/components/** @ui-team @frontend-architects
+src/web/src/config/** @frontend-config-team @security-team
+
+# Infrastructure and DevOps
+infrastructure/** @devops-team @platform-engineers
+infrastructure/kubernetes/** @kubernetes-team @platform-architects
+infrastructure/monitoring/** @sre-team @monitoring-engineers
+
+# CI/CD Pipeline Configuration
+.github/workflows/** @devops-team @ci-cd-maintainers
+
+# Configuration Files
+*.config.ts @config-maintainers
+
+# Package Dependencies
+package.json @dependency-managers @security-team
