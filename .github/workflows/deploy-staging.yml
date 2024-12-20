@@ -1,0 +1,196 @@
+name: Deploy to Staging Environment
+
+# Trigger on push to develop branch or manual workflow dispatch
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'src/backend/**'
+      - 'src/web/**'
+      - 'infrastructure/kubernetes/**'
+  workflow_dispatch:
+    inputs:
+      deploy_tag:
+        description: 'Deployment tag'
+        required: true
+        type: string
+
+# Environment configuration
+env:
+  NODE_ENV: staging
+  STAGING_NAMESPACE: crm-staging
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: crm-staging-cluster
+  STAGING_DOMAIN: staging.crm.example.com
+  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+  ENABLE_MONITORING: 'true'
+  ENABLE_ALERTS: 'true'
+  SLACK_NOTIFICATION_CHANNEL: crm-staging-deployments
+
+# Concurrency group to prevent parallel deployments
+concurrency:
+  group: staging
+  cancel-in-progress: true
+
+# Required permissions for OIDC authentication
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+jobs:
+  security-scan:
+    name: Security Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Run Snyk Security Scan
+        uses: snyk/actions/node@v1
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: '--severity-threshold=high'
+          command: monitor
+
+  test:
+    name: Run Tests
+    needs: security-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Run Backend Tests
+        working-directory: src/backend
+        run: |
+          npm ci
+          npm run test:coverage
+          npm run test:integration
+          npm run lint
+
+      - name: Run Frontend Tests
+        working-directory: src/web
+        run: |
+          npm ci
+          npm run test:coverage
+          npm run test:e2e
+          npm run lint
+
+  build-and-push:
+    name: Build and Push Images
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        id: login-ecr
+
+      - name: Build and push Backend image
+        run: |
+          docker build \
+            --build-arg NODE_ENV=staging \
+            --build-arg VERSION=${{ github.sha }} \
+            -t ${{ env.ECR_REGISTRY }}/crm-backend:staging \
+            -t ${{ env.ECR_REGISTRY }}/crm-backend:${{ github.sha }} \
+            ./src/backend
+          docker push ${{ env.ECR_REGISTRY }}/crm-backend:staging
+          docker push ${{ env.ECR_REGISTRY }}/crm-backend:${{ github.sha }}
+
+      - name: Build and push Frontend image
+        run: |
+          docker build \
+            --build-arg NODE_ENV=staging \
+            --build-arg VERSION=${{ github.sha }} \
+            -t ${{ env.ECR_REGISTRY }}/crm-frontend:staging \
+            -t ${{ env.ECR_REGISTRY }}/crm-frontend:${{ github.sha }} \
+            ./src/web
+          docker push ${{ env.ECR_REGISTRY }}/crm-frontend:staging
+          docker push ${{ env.ECR_REGISTRY }}/crm-frontend:${{ github.sha }}
+
+  deploy:
+    name: Deploy to Staging
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.crm.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure Kubernetes
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ env.EKS_CLUSTER_NAME }} \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Deploy Backend
+        run: |
+          kubectl apply -f infrastructure/kubernetes/backend-deployment.yaml -n ${{ env.STAGING_NAMESPACE }}
+          kubectl rollout status deployment/crm-backend -n ${{ env.STAGING_NAMESPACE }} --timeout=300s
+
+      - name: Deploy Frontend
+        run: |
+          kubectl apply -f infrastructure/kubernetes/frontend-deployment.yaml -n ${{ env.STAGING_NAMESPACE }}
+          kubectl rollout status deployment/crm-frontend -n ${{ env.STAGING_NAMESPACE }} --timeout=300s
+
+      - name: Verify Health Checks
+        run: |
+          echo "Verifying backend health..."
+          kubectl exec -n ${{ env.STAGING_NAMESPACE }} deploy/crm-backend -- curl -f http://localhost:3000/health
+          
+          echo "Verifying frontend health..."
+          kubectl exec -n ${{ env.STAGING_NAMESPACE }} deploy/crm-frontend -- curl -f http://localhost:80/health
+
+  post-deploy:
+    name: Post-deployment Verification
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify External Access
+        run: |
+          echo "Verifying external access..."
+          curl -f https://${{ env.STAGING_DOMAIN }}/health
+          
+          echo "Checking pod status..."
+          kubectl get pods -n ${{ env.STAGING_NAMESPACE }} -o wide
+
+      - name: Send Deployment Notification
+        if: always()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: ${{ env.SLACK_NOTIFICATION_CHANNEL }}
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: 'Staging Deployment Status'
+          SLACK_MESSAGE: 'Deployment to staging environment ${{ job.status }}'
