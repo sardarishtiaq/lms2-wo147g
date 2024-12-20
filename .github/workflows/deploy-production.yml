@@ -183,7 +183,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Notify Deployment Status
-        uses: slackapi/slack-github-action@v1.24.0
+        uses: slackapi/slack-github-action@v2.0.0
         with:
           channel-id: 'deployments'
           slack-message: "Production deployment of version ${{ env.VERSION }} completed successfully"
