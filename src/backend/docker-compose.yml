@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: crm-api
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - MONGODB_URI=mongodb://mongodb:27017/crm
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - TZ=UTC
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: npm run dev
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # MongoDB Service
+  mongodb:
+    image: mongo:6.0
+    container_name: crm-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    environment:
+      - MONGO_INITDB_DATABASE=crm
+      - MONGO_INITDB_ROOT_USERNAME_FILE=/run/secrets/mongodb_root_username
+      - MONGO_INITDB_ROOT_PASSWORD_FILE=/run/secrets/mongodb_root_password
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - backend
+    restart: unless-stopped
+    secrets:
+      - mongodb_root_username
+      - mongodb_root_password
+
+  # Redis Cache Service
+  redis:
+    image: redis:7.0-alpine
+    container_name: crm-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - backend
+    restart: unless-stopped
+    secrets:
+      - redis_password
+
+volumes:
+  node_modules:
+    name: crm-node-modules
+  mongodb_data:
+    name: crm-mongodb-data
+  mongodb_config:
+    name: crm-mongodb-config
+  redis_data:
+    name: crm-redis-data
+
+networks:
+  backend:
+    name: crm-backend-network
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+
+secrets:
+  mongodb_root_username:
+    file: ./secrets/mongodb_root_username.txt
+  mongodb_root_password:
+    file: ./secrets/mongodb_root_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
