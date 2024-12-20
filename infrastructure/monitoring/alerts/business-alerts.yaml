@@ -1,0 +1,144 @@
+# Prometheus Alert Rules for Business Metrics Monitoring
+# Version: 1.0.0
+# Prometheus Version: 2.45.0
+
+groups:
+  # Lead Conversion Rate Monitoring
+  - name: lead_conversion
+    rules:
+      # Alert for low lead conversion rate
+      - alert: LowLeadConversionRate
+        expr: |
+          sum(rate(leads_converted_total[24h])) by (tenant_id) 
+          / 
+          sum(rate(leads_total[24h])) by (tenant_id) 
+          * 100 < 25
+        for: 24h
+        labels:
+          severity: warning
+          type: business
+          metric_type: conversion
+          category: sales_performance
+        annotations:
+          summary: "Low lead conversion rate detected for tenant {{ $labels.tenant_id }}"
+          description: "Lead conversion rate is below 25% target for the last 24 hours. Current rate: {{ $value }}%"
+          runbook_url: "https://wiki.example.com/alerts/low-conversion-rate"
+
+      # Alert for declining conversion trend
+      - alert: DecliningConversionTrend
+        expr: |
+          (
+            sum(rate(leads_converted_total[24h])) by (tenant_id)
+            /
+            sum(rate(leads_total[24h])) by (tenant_id)
+          )
+          /
+          (
+            sum(rate(leads_converted_total[7d] offset 24h)) by (tenant_id)
+            /
+            sum(rate(leads_total[7d] offset 24h)) by (tenant_id)
+          ) < 0.9
+        for: 72h
+        labels:
+          severity: warning
+          type: business
+          metric_type: conversion
+          category: trend_analysis
+        annotations:
+          summary: "Declining conversion trend for tenant {{ $labels.tenant_id }}"
+          description: "Conversion rate has declined by more than 10% compared to previous week"
+
+  # User Adoption Rate Monitoring
+  - name: user_adoption
+    rules:
+      # Alert for low user adoption rate
+      - alert: LowUserAdoptionRate
+        expr: |
+          sum(active_users_total) by (tenant_id)
+          /
+          sum(registered_users_total) by (tenant_id)
+          * 100 < 90
+        for: 72h
+        labels:
+          severity: warning
+          type: business
+          metric_type: adoption
+          category: user_engagement
+        annotations:
+          summary: "Low user adoption rate detected for tenant {{ $labels.tenant_id }}"
+          description: "User adoption rate is below 90% target. Current rate: {{ $value }}%"
+          runbook_url: "https://wiki.example.com/alerts/low-adoption-rate"
+
+      # Alert for inactive users
+      - alert: HighInactiveUsersRate
+        expr: |
+          sum(inactive_users_total[30d]) by (tenant_id)
+          /
+          sum(registered_users_total) by (tenant_id)
+          * 100 > 20
+        for: 24h
+        labels:
+          severity: warning
+          type: business
+          metric_type: adoption
+          category: user_engagement
+        annotations:
+          summary: "High inactive users rate for tenant {{ $labels.tenant_id }}"
+          description: "More than 20% of registered users have been inactive for 30 days"
+
+  # Customer Satisfaction Monitoring
+  - name: customer_satisfaction
+    rules:
+      # Alert for low CSAT score
+      - alert: LowCustomerSatisfaction
+        expr: |
+          avg(customer_satisfaction_score) by (tenant_id) < 85
+        for: 24h
+        labels:
+          severity: warning
+          type: business
+          metric_type: satisfaction
+          category: customer_experience
+        annotations:
+          summary: "Low CSAT score detected for tenant {{ $labels.tenant_id }}"
+          description: "Customer satisfaction score is below 85% target. Current score: {{ $value }}%"
+          runbook_url: "https://wiki.example.com/alerts/low-csat-score"
+
+      # Alert for declining CSAT trend
+      - alert: DecliningCSATTrend
+        expr: |
+          avg_over_time(customer_satisfaction_score[7d]) by (tenant_id)
+          <
+          avg_over_time(customer_satisfaction_score[7d] offset 7d) by (tenant_id) * 0.95
+        for: 48h
+        labels:
+          severity: warning
+          type: business
+          metric_type: satisfaction
+          category: trend_analysis
+        annotations:
+          summary: "Declining CSAT trend for tenant {{ $labels.tenant_id }}"
+          description: "CSAT score has declined by more than 5% compared to previous week"
+
+  # System Performance Impact on Business
+  - name: system_performance_business
+    rules:
+      # Alert for high response time impact
+      - alert: HighResponseTimeBusinessImpact
+        expr: |
+          (
+            sum(rate(transaction_duration_seconds_sum[5m])) by (tenant_id)
+            /
+            sum(rate(transaction_duration_seconds_count[5m])) by (tenant_id)
+          ) > 2
+          and
+          sum(rate(user_session_abandonment_total[5m])) by (tenant_id) > 0
+        for: 15m
+        labels:
+          severity: critical
+          type: business
+          metric_type: performance
+          category: user_experience
+        annotations:
+          summary: "High response time affecting business metrics for tenant {{ $labels.tenant_id }}"
+          description: "System response time exceeding 2s with increased session abandonment rate"
