@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Character encoding and viewport configuration -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    
+    <!-- Primary meta tags -->
+    <title>CRM System - Lead Management Solution</title>
+    <meta name="description" content="Enterprise-grade Multi-tenant CRM system for comprehensive lead management and pipeline tracking">
+    <meta name="theme-color" content="#1976D2">
+    
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="CRM System - Lead Management Solution">
+    <meta property="og:description" content="Professional CRM system for lead tracking and pipeline management">
+    <meta property="og:type" content="website">
+    
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CRM System - Lead Management Solution">
+    <meta name="twitter:description" content="Professional CRM system for lead tracking and pipeline management">
+    
+    <!-- Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        style-src 'self' https://fonts.googleapis.com 'unsafe-inline';
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data: https:;
+        connect-src 'self' https://api.example.com;
+        script-src 'self' 'wasm-unsafe-eval';
+        frame-ancestors 'none';
+        form-action 'self';
+        base-uri 'self';
+        upgrade-insecure-requests;
+    ">
+    
+    <!-- Font preloading for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" as="style">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" integrity="sha384-example">
+    <link rel="stylesheet" href="/src/styles/global.css">
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Performance and security headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+</head>
+<body>
+    <!-- React application mount point -->
+    <div id="root" role="application" aria-label="CRM Application"></div>
+    
+    <!-- Noscript fallback -->
+    <noscript>
+        <div style="padding: 20px; text-align: center;">
+            <h1>JavaScript Required</h1>
+            <p>You need to enable JavaScript to run this application.</p>
+        </div>
+    </noscript>
+    
+    <!-- Main application script -->
+    <script type="module" src="/src/main.tsx" defer integrity="sha384-example"></script>
+</body>
+</html>
