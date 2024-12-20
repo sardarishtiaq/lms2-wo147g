@@ -1,0 +1,53 @@
+{
+  "watch": [
+    "src"
+  ],
+  "ext": ".ts,.js,.json",
+  "ignore": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "src/coverage",
+    "src/logs",
+    "node_modules",
+    "dist",
+    "src/**/*.d.ts",
+    "src/temp",
+    "src/uploads"
+  ],
+  "exec": "ts-node ./src/index.ts",
+  "env": {
+    "NODE_ENV": "development",
+    "TS_NODE_PROJECT": "./tsconfig.json",
+    "TS_NODE_TRANSPILE_ONLY": "true"
+  },
+  "delay": "1000",
+  "verbose": true,
+  "restartable": "rs",
+  "colours": true,
+  "legacyWatch": false,
+  "polling": false
+}
+```
+
+This configuration file is carefully crafted to provide an optimal development experience for the multi-tenant CRM backend service. Here's a detailed breakdown of each configuration option:
+
+1. Watch Patterns:
+- `"watch": ["src"]`: Monitors the src directory for any changes
+- `"ext": ".ts,.js,.json"`: Watches TypeScript, JavaScript, and JSON files for changes
+
+2. Ignore Patterns:
+- Excludes test files: `"src/**/*.spec.ts"`, `"src/**/*.test.ts"`
+- Excludes build artifacts: `"dist"`, `"src/**/*.d.ts"`
+- Excludes temporary directories: `"src/temp"`, `"src/uploads"`
+- Excludes logs and coverage: `"src/coverage"`, `"src/logs"`
+- Excludes dependencies: `"node_modules"`
+
+3. Execution Settings:
+- Uses ts-node for TypeScript execution: `"exec": "ts-node ./src/index.ts"`
+- Sets development environment variables:
+  ```json
+  "env": {
+    "NODE_ENV": "development",
+    "TS_NODE_PROJECT": "./tsconfig.json",
+    "TS_NODE_TRANSPILE_ONLY": "true"
+  }
