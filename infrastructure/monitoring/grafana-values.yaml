@@ -1,0 +1,121 @@
+grafana:
+  # High availability configuration with multiple replicas
+  replicaCount: 2
+
+  image:
+    repository: grafana/grafana  # v9.5.0
+    tag: 9.5.0
+    pullPolicy: IfNotPresent
+
+  # Pod anti-affinity for high availability
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            topologyKey: kubernetes.io/hostname
+
+  # Persistent storage configuration
+  persistentVolume:
+    enabled: true
+    size: 10Gi
+    storageClass: gp2
+    backup:
+      enabled: true
+      schedule: "0 0 * * *"  # Daily backups at midnight
+
+  # Resource allocation
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+  # Data source configurations
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus-server:9090
+          access: proxy
+          isDefault: true
+          jsonData:
+            timeInterval: "30s"
+            queryTimeout: "60s"
+        - name: Loki
+          type: loki
+          url: http://loki:3100
+          access: proxy
+          jsonData:
+            maxLines: 1000
+
+  # Dashboard provider configuration
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: default
+          orgId: 1
+          folder: ""
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards
+
+  # Pre-configured dashboards
+  dashboards:
+    default:
+      backend-dashboard:
+        json: backend-dashboard.json
+        datasource: Prometheus
+      frontend-dashboard:
+        json: frontend-dashboard.json
+        datasource: Prometheus
+      business-metrics:
+        json: business-metrics.json
+        datasource: Prometheus
+      security-dashboard:
+        json: security-dashboard.json
+        datasource: Loki
+
+  # Ingress configuration with SSL
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    hosts:
+      - grafana.${DOMAIN_NAME}
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - grafana.${DOMAIN_NAME}
+
+  # Enhanced security configuration
+  security:
+    adminUser: ${GRAFANA_ADMIN_USER}
+    adminPassword: ${GRAFANA_ADMIN_PASSWORD}
+    secretKey: ${GRAFANA_SECRET_KEY}
+    oauth:
+      enabled: true
+      autoLogin: true
+      allowSignUp: false
+    rbac:
+      enabled: true
+      namespaced: true
+
+  # SMTP configuration for alerts
+  smtp:
+    enabled: true
+    host: ${SMTP_HOST}:587
+    user: ${SMTP_USER}
+    password: ${SMTP_PASSWORD}
+    fromAddress: grafana@${DOMAIN_NAME}
+    startTLS: true
+    skipVerify: false
