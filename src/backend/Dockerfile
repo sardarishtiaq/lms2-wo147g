@@ -1,5 +1,5 @@
 # ---- Build Stage ----
-FROM node:18-alpine AS builder
+FROM node:23-alpine AS builder
 
 # Add build dependencies
 RUN apk add --no-cache python3 make g++ git
@@ -25,7 +25,7 @@ RUN npm audit && \
     npm prune --production
 
 # ---- Production Stage ----
-FROM node:18-alpine
+FROM node:23-alpine
 
 # Add production dependencies
 RUN apk add --no-cache curl tzdata
